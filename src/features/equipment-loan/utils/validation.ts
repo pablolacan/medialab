@@ -24,10 +24,17 @@ export const loanFormSchema = z.object({
     .min(1, 'La fecha es requerida')
     .refine((date) => {
       const selectedDate = new Date(date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return selectedDate >= today;
-    }, 'La fecha no puede ser anterior a hoy')
+      // Verificar que sea una fecha válida
+      return !isNaN(selectedDate.getTime());
+    }, 'Debe ser una fecha válida')
+    .refine((date) => {
+      const selectedDate = new Date(date);
+      const minDate = new Date('2020-01-01'); // Fecha mínima razonable
+      const maxDate = new Date();
+      maxDate.setFullYear(maxDate.getFullYear() + 1); // Hasta 1 año en el futuro
+      
+      return selectedDate >= minDate && selectedDate <= maxDate;
+    }, 'La fecha debe estar entre 2020 y el próximo año')
 });
 
 export type LoanFormData = z.infer<typeof loanFormSchema>;
