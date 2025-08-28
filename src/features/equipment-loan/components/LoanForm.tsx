@@ -12,7 +12,7 @@ import { validateForm, getFieldError } from '../utils/validation';
 import { getGuatemalaDateTime } from '../utils';
 import { getGuatemalaDateString } from './ui/DatePicker';
 import { useAuth } from '../../../hooks/useAuth';
-import type { LoanFormData, CalendarEvent } from '../types';
+import type { LoanFormData, CalendarEvent, Equipment } from '../types';
 
 interface LoanFormProps {
   selectedEvent?: CalendarEvent | null;
@@ -31,18 +31,23 @@ const calculateLoanDates = (eventoInicio: string, eventoFin: string) => {
   };
 };
 
+// Helper function para obtener información del equipo seleccionado
+const getSelectedEquipmentInfo = (equipmentId: string, equipments: Equipment[]) => {
+  return equipments.find(eq => eq.id === equipmentId);
+};
+
 export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
   const { user, name, email } = useAuth();
   
   const [formData, setFormData] = useState<LoanFormData>({
     nombreCompleto: name || '',
-    contacto: email || '',        // NUEVO
+    contacto: email || '',
     tipoEquipo: '',
     equipoId: '',
     evento: '',
     fecha: getGuatemalaDateString(),
-    fechaPrestamo: '',           // NUEVO
-    fechaDevolucion: ''          // NUEVO
+    fechaPrestamo: '',
+    fechaDevolucion: ''
   });
   
   const [validationErrors, setValidationErrors] = useState<any>({});
@@ -67,7 +72,12 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
     reset 
   } = useLoanSubmission();
 
-  
+  // Obtener información del equipo seleccionado
+  const selectedEquipment = formData.equipoId 
+    ? getSelectedEquipmentInfo(formData.equipoId, getEquipmentsByType(formData.tipoEquipo))
+    : null;
+
+  const requiresAuthorization = selectedEquipment?.autorizacion || false;
 
   useEffect(() => {
     if (name && !formData.nombreCompleto) {
@@ -151,7 +161,7 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
   const equipmentOptions = formData.tipoEquipo 
     ? getEquipmentsByType(formData.tipoEquipo).map(eq => ({
         value: eq.id,
-        label: `${eq.id} - ${eq.estado}${eq.autorizacion ? ' (Requiere autorización)' : ''}`
+        label: `${eq.id} - ${eq.estado}${eq.autorizacion ? ' ⚠️ (Requiere autorización)' : ''}`
       }))
     : [];
 
@@ -231,6 +241,21 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
                     <div className="text-zinc-200 font-semibold text-sm">
                       <p>Préstamo: {new Date(formData.fechaPrestamo).toLocaleString('es-GT')}</p>
                       <p>Devolución: {new Date(formData.fechaDevolucion).toLocaleString('es-GT')}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Alerta de autorización en resumen */}
+                {requiresAuthorization && (
+                  <div className="col-span-full bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-amber-400 font-semibold text-sm">Estado: Pendiente de autorización</p>
+                        <p className="text-amber-300 text-xs">Un administrador debe aprobar este préstamo antes de poder retirar el equipo</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -314,7 +339,7 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
                   )}
                 </div>
 
-                {/* Contact Field - NUEVO */}
+                {/* Contact Field */}
                 <div className="relative">
                   <Input
                     label="Email de Contacto"
@@ -359,6 +384,7 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.3 }}
+                      className="space-y-3"
                     >
                       <Select
                         label="Equipo Específico"
@@ -371,6 +397,33 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
                         disabled={isSubmitting}
                         helperText={`${equipmentOptions.length} equipos disponibles`}
                       />
+                      
+                      {/* Alerta de autorización - Aparece dinámicamente */}
+                      <AnimatePresence>
+                        {requiresAuthorization && formData.equipoId && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4"
+                          >
+                            <div className="flex items-start space-x-3">
+                              <svg className="w-6 h-6 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+                              </svg>
+                              <div>
+                                <h4 className="text-amber-400 font-semibold mb-1">
+                                  ⚠️ Equipo requiere autorización
+                                </h4>
+                                <p className="text-amber-300 text-sm">
+                                  El equipo <strong>{formData.equipoId}</strong> requiere autorización previa. 
+                                  Tu solicitud quedará pendiente hasta ser aprobada por un administrador.
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )}
                 </AnimatePresence>
