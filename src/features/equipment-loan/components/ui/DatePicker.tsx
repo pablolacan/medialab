@@ -67,13 +67,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
             ref={ref}
             {...props}
           />
-          
-          {/* Icono de calendario */}
-          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
+          {/* Removido el ícono manual porque el input date ya tiene su propio ícono nativo */}
         </div>
         
         {/* Mostrar fecha seleccionada en formato legible */}

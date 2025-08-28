@@ -5,7 +5,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { DatePicker } from './ui/DatePicker';
-import { EventComboBox } from './ui/EventComboBox';
+import { EventSelect } from './ui/EventSelect'; // Nuevo componente
 import { useInventory } from '../hooks/useInventory';
 import { useEvents } from '../hooks/useEvents';
 import { useLoanSubmission } from '../hooks/useLoanSubmission';
@@ -22,12 +22,11 @@ export const LoanForm: React.FC = () => {
     nombreCompleto: name || '',
     tipoEquipo: '',
     equipoId: '',
-    evento: '',
+    evento: '', // Ya no se auto-llena
     fecha: getGuatemalaDateString()
   });
   
   const [validationErrors, setValidationErrors] = useState<any>({});
-  const [hasUserInteractedWithEvent, setHasUserInteractedWithEvent] = useState(false);
   
   const { 
     availableTypes, 
@@ -38,7 +37,6 @@ export const LoanForm: React.FC = () => {
   const { 
     currentEvents,
     eventOptions,
-    primaryEvent, 
     isLoading: eventsLoading 
   } = useEvents();
   
@@ -57,12 +55,7 @@ export const LoanForm: React.FC = () => {
     }
   }, [name, formData.nombreCompleto]);
 
-  // Auto-set primary event when it loads, but only if user hasn't interacted
-  useEffect(() => {
-    if (primaryEvent && !formData.evento && !hasUserInteractedWithEvent) {
-      setFormData(prev => ({ ...prev, evento: primaryEvent }));
-    }
-  }, [primaryEvent, formData.evento, hasUserInteractedWithEvent]);
+  // Ya no auto-llenamos el evento - el usuario debe seleccionarlo o escribirlo
 
   const handleInputChange = (field: keyof LoanFormData, value: string) => {
     if (field === 'nombreCompleto' && name) {
@@ -76,8 +69,11 @@ export const LoanForm: React.FC = () => {
     }
   };
 
-  const handleEventChange = (value: string) => {
-    setHasUserInteractedWithEvent(true);
+  const handleEventInputChange = (value: string) => {
+    handleInputChange('evento', value);
+  };
+
+  const handleEventSelectChange = (value: string) => {
     handleInputChange('evento', value);
   };
 
@@ -108,10 +104,9 @@ export const LoanForm: React.FC = () => {
       nombreCompleto: name || '',
       tipoEquipo: '',
       equipoId: '',
-      evento: primaryEvent || '',
+      evento: '', // Sin prellenar
       fecha: getGuatemalaDateString()
     });
-    setHasUserInteractedWithEvent(false);
     reset();
   };
 
@@ -304,21 +299,20 @@ export const LoanForm: React.FC = () => {
 
               {/* Right Column */}
               <div className="space-y-8">
-                {/* Event */}
-                <EventComboBox
+                {/* Event - Nuevo componente */}
+                <EventSelect
                   label="Evento"
-                  value={formData.evento}
-                  onChange={handleEventChange}
+                  inputValue={formData.evento}
+                  onInputChange={handleEventInputChange}
+                  onSelectChange={handleEventSelectChange}
                   options={eventOptions}
                   error={getFieldError(validationErrors, 'evento')}
                   helperText={
                     eventsLoading 
                       ? "Cargando eventos..." 
-                      : currentEvents.length > 1 
+                      : currentEvents.length > 0
                         ? `${currentEvents.length} eventos activos disponibles`
-                        : currentEvents.length === 1
-                          ? "Evento actual pre-seleccionado"
-                          : "No hay eventos activos"
+                        : "No hay eventos activos - escribe el nombre del evento"
                   }
                   required
                   disabled={isSubmitting}
