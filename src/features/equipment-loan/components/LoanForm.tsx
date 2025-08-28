@@ -4,6 +4,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { DatePicker } from './ui/DatePicker';
+import { EventComboBox } from './ui/EventComboBox';
 import { useInventory } from '../hooks/useInventory';
 import { useEvents } from '../hooks/useEvents';
 import { useLoanSubmission } from '../hooks/useLoanSubmission';
@@ -21,6 +22,7 @@ export const LoanForm: React.FC = () => {
   });
   
   const [validationErrors, setValidationErrors] = useState<any>({});
+  const [hasUserInteractedWithEvent, setHasUserInteractedWithEvent] = useState(false);
   
   const { 
     availableTypes, 
@@ -29,7 +31,9 @@ export const LoanForm: React.FC = () => {
   } = useInventory();
   
   const { 
-    currentEvent, 
+    currentEvents,
+    eventOptions,
+    primaryEvent, 
     isLoading: eventsLoading 
   } = useEvents();
   
@@ -41,12 +45,12 @@ export const LoanForm: React.FC = () => {
     reset 
   } = useLoanSubmission();
 
-  // Auto-set current event when it loads
+  // Auto-set primary event when it loads, but only if user hasn't interacted
   useEffect(() => {
-    if (currentEvent && currentEvent !== 'Sin evento activo') {
-      setFormData(prev => ({ ...prev, evento: currentEvent }));
+    if (primaryEvent && !formData.evento && !hasUserInteractedWithEvent) {
+      setFormData(prev => ({ ...prev, evento: primaryEvent }));
     }
-  }, [currentEvent]);
+  }, [primaryEvent, formData.evento, hasUserInteractedWithEvent]);
 
   const handleInputChange = (field: keyof LoanFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -55,6 +59,11 @@ export const LoanForm: React.FC = () => {
     if (validationErrors[field]) {
       setValidationErrors((prev: typeof validationErrors) => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleEventChange = (value: string) => {
+    setHasUserInteractedWithEvent(true);
+    handleInputChange('evento', value);
   };
 
   const handleTypeChange = (type: string) => {
@@ -84,9 +93,10 @@ export const LoanForm: React.FC = () => {
       nombreCompleto: '',
       tipoEquipo: '',
       equipoId: '',
-      evento: currentEvent && currentEvent !== 'Sin evento activo' ? currentEvent : '',
+      evento: primaryEvent || '',
       fecha: getTodayDate()
     });
+    setHasUserInteractedWithEvent(false); // Reset interaction flag
     reset();
   };
 
@@ -188,12 +198,21 @@ export const LoanForm: React.FC = () => {
           )}
         </AnimatePresence>
 
-        <Input
+        <EventComboBox
           label="Evento"
           value={formData.evento}
-          onChange={(e) => handleInputChange('evento', e.target.value)}
+          onChange={handleEventChange}
+          options={eventOptions}
           error={getFieldError(validationErrors, 'evento')}
-          helperText={eventsLoading ? "Cargando evento actual..." : undefined}
+          helperText={
+            eventsLoading 
+              ? "Cargando eventos..." 
+              : currentEvents.length > 1 
+                ? `${currentEvents.length} eventos activos disponibles`
+                : currentEvents.length === 1
+                  ? "Evento actual pre-seleccionado"
+                  : "No hay eventos activos"
+          }
           required
           disabled={isSubmitting}
         />
