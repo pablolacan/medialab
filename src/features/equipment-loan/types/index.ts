@@ -39,7 +39,17 @@ export interface EventsResponse {
   timestamp: string;
 }
 
+// ACTUALIZADO: Tipo para manejar tanto el formato estándar como la respuesta real de n8n
 export interface LoanSubmissionResponse {
-  success: boolean;
-  message: string;
+  // Formato estándar (por si n8n lo usa en el futuro)
+  success?: boolean;
+  message?: string;
+  
+  // Formato actual de n8n
+  Fecha?: string;
+  Estado?: string;
+  "Fecha Devolucion"?: string;
+  
+  // Para permitir cualquier otra propiedad que n8n pueda devolver
+  [key: string]: any;
 }
