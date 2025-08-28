@@ -55,10 +55,13 @@ export const useLoanSubmission = (): UseLoanSubmissionReturn => {
       // Preparar datos para enviar a n8n
       const payload = {
         nombreCompleto: data.nombreCompleto.trim(),
+        contacto: data.contacto.trim(),           // AGREGAR
         tipoEquipo: data.tipoEquipo,
         equipoId: data.equipoId,
         evento: data.evento.trim(),
         fecha: data.fecha,
+        fechaPrestamo: data.fechaPrestamo,        // AGREGAR
+        fechaDevolucion: data.fechaDevolucion,    // AGREGAR
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone

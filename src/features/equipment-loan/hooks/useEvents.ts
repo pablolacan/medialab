@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { equipmentLoanApi } from '../services/api';
-import type { Event } from '../types';
+import type { CalendarEvent } from '../types';
 
 interface EventOption {
   value: string;
@@ -9,18 +9,18 @@ interface EventOption {
 }
 
 interface UseEventsReturn {
-  currentEvents: Event[];
-  allEvents: Event[];
+  currentEvents: CalendarEvent[];      // CAMBIAR Event a CalendarEvent
+  allEvents: CalendarEvent[];          // CAMBIAR Event a CalendarEvent
   eventOptions: EventOption[];
-  primaryEvent: string; // El evento principal sugerido
+  primaryEvent: string;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export const useEvents = (): UseEventsReturn => {
-  const [currentEvents, setCurrentEvents] = useState<Event[]>([]);
-  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);  // CAMBIAR
+  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);          // CAMBIAR
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,8 +55,8 @@ export const useEvents = (): UseEventsReturn => {
   const eventOptions: EventOption[] = [
     // Primero los eventos activos (destacados)
     ...currentEvents.map(event => ({
-      value: event.nombre,
-      label: event.nombre,
+      value: event.evento,
+      label: event.evento,
       type: 'current' as const
     })),
     // Luego eventos recientes no activos (últimos 7 días)
@@ -69,8 +69,8 @@ export const useEvents = (): UseEventsReturn => {
         return eventDate >= weekAgo;
       })
       .map(event => ({
-        value: event.nombre,
-        label: event.nombre,
+        value: event.evento,
+        label: event.evento,
         type: 'predefined' as const
       }))
   ];
@@ -82,7 +82,7 @@ export const useEvents = (): UseEventsReturn => {
     }
     
     if (currentEvents.length === 1) {
-      return currentEvents[0].nombre;
+      return currentEvents[0].evento;
     }
     
     // Si hay múltiples eventos activos, priorizar por:
@@ -106,7 +106,7 @@ export const useEvents = (): UseEventsReturn => {
       return bStart.getTime() - aStart.getTime();
     });
     
-    return sortedEvents[0].nombre;
+    return sortedEvents[0].evento;
   };
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+// En src/features/equipment-loan/utils/validation.ts
 import { z } from 'zod';
 
 export const loanFormSchema = z.object({
@@ -7,6 +8,11 @@ export const loanFormSchema = z.object({
     .max(50, 'El nombre no puede tener más de 50 caracteres')
     .regex(/^[a-zA-ZÀ-ÿ\u00f1\u00d1\s]+$/, 'El nombre solo puede contener letras y espacios'),
   
+  contacto: z                // AGREGAR ESTO
+    .string()
+    .email('Debe ser un email válido')
+    .min(1, 'El email de contacto es requerido'),
+    
   tipoEquipo: z
     .string()
     .min(1, 'Debes seleccionar un tipo de equipo'),
@@ -21,25 +27,19 @@ export const loanFormSchema = z.object({
   
   fecha: z
     .string()
-    .min(1, 'La fecha es requerida')
-    .refine((date) => {
-      const selectedDate = new Date(date);
-      // Verificar que sea una fecha válida
-      return !isNaN(selectedDate.getTime());
-    }, 'Debe ser una fecha válida')
-    .refine((date) => {
-      const selectedDate = new Date(date);
-      const minDate = new Date('2020-01-01'); // Fecha mínima razonable
-      const maxDate = new Date();
-      maxDate.setFullYear(maxDate.getFullYear() + 1); // Hasta 1 año en el futuro
-      
-      return selectedDate >= minDate && selectedDate <= maxDate;
-    }, 'La fecha debe estar entre 2020 y el próximo año')
+    .min(1, 'La fecha es requerida'),
+    
+  fechaPrestamo: z          
+    .string()
+    .min(1, 'La fecha de préstamo es requerida'),
+    
+  fechaDevolucion: z         
+    .string()
+    .min(1, 'La fecha de devolución es requerida')
 });
 
 export type LoanFormData = z.infer<typeof loanFormSchema>;
 
-// Utility functions for form validation
 export const validateForm = (data: unknown) => {
   return loanFormSchema.safeParse(data);
 };

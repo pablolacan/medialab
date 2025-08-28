@@ -2,21 +2,28 @@ export interface Equipment {
   tipo: string;
   id: string;
   estado: string;
+  autorizacion: boolean;
 }
 
-export interface Event {
-  nombre: string;
+export interface CalendarEvent {
+  id: string;
+  evento: string;
   inicio: string;
   fin: string;
-  activo: boolean;
+  ubicacion?: string;
+  descripcion?: string;
+  activo?: boolean;
 }
 
 export interface LoanFormData {
   nombreCompleto: string;
+  contacto: string;          
   tipoEquipo: string;
   equipoId: string;
   evento: string;
-  fecha: string;
+  fecha: string;             
+  fechaPrestamo: string;     
+  fechaDevolucion: string;   
 }
 
 export interface ApiResponse<T = any> {
@@ -35,7 +42,7 @@ export interface InventoryResponse {
 export interface EventsResponse {
   success: boolean;
   eventoActual: string;
-  eventos: Event[];
+  eventos: CalendarEvent[];  
   timestamp: string;
 }
 

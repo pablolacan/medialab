@@ -1,11 +1,10 @@
-// src/features/equipment-loan/components/LoanForm.tsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { DatePicker } from './ui/DatePicker';
-import { EventSelect } from './ui/EventSelect'; // Nuevo componente
+import { EventSelect } from './ui/EventSelect';
 import { useInventory } from '../hooks/useInventory';
 import { useEvents } from '../hooks/useEvents';
 import { useLoanSubmission } from '../hooks/useLoanSubmission';
@@ -13,17 +12,37 @@ import { validateForm, getFieldError } from '../utils/validation';
 import { getGuatemalaDateTime } from '../utils';
 import { getGuatemalaDateString } from './ui/DatePicker';
 import { useAuth } from '../../../hooks/useAuth';
-import type { LoanFormData } from '../types';
+import type { LoanFormData, CalendarEvent } from '../types';
 
-export const LoanForm: React.FC = () => {
-  const { user, name } = useAuth();
+interface LoanFormProps {
+  selectedEvent?: CalendarEvent | null;
+}
+
+const calculateLoanDates = (eventoInicio: string, eventoFin: string) => {
+  const inicio = new Date(eventoInicio);
+  const fin = new Date(eventoFin);
+  
+  const fechaPrestamo = new Date(inicio.getTime() - (60 * 60 * 1000));
+  const fechaDevolucion = new Date(fin.getTime() + (60 * 60 * 1000));
+  
+  return {
+    fechaPrestamo: fechaPrestamo.toISOString(),
+    fechaDevolucion: fechaDevolucion.toISOString()
+  };
+};
+
+export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
+  const { user, name, email } = useAuth();
   
   const [formData, setFormData] = useState<LoanFormData>({
     nombreCompleto: name || '',
+    contacto: email || '',        // NUEVO
     tipoEquipo: '',
     equipoId: '',
-    evento: '', // Ya no se auto-llena
-    fecha: getGuatemalaDateString()
+    evento: '',
+    fecha: getGuatemalaDateString(),
+    fechaPrestamo: '',           // NUEVO
+    fechaDevolucion: ''          // NUEVO
   });
   
   const [validationErrors, setValidationErrors] = useState<any>({});
@@ -48,17 +67,33 @@ export const LoanForm: React.FC = () => {
     reset 
   } = useLoanSubmission();
 
-  // Auto-set user name when it loads
+  
+
   useEffect(() => {
     if (name && !formData.nombreCompleto) {
-      setFormData(prev => ({ ...prev, nombreCompleto: name }));
+        setFormData(prev => ({ ...prev, nombreCompleto: name }));
     }
-  }, [name, formData.nombreCompleto]);
-
-  // Ya no auto-llenamos el evento - el usuario debe seleccionarlo o escribirlo
+    if (email && !formData.contacto) {
+        setFormData(prev => ({ ...prev, contacto: email }));
+    }
+    if (selectedEvent && !formData.evento) {
+        const { fechaPrestamo, fechaDevolucion } = calculateLoanDates(
+        selectedEvent.inicio,
+        selectedEvent.fin
+        );
+        setFormData(prev => ({
+        ...prev,
+        evento: selectedEvent.evento,
+        fecha: new Date(selectedEvent.inicio).toISOString().split('T')[0],
+        fechaPrestamo,
+        fechaDevolucion
+        }));
+    }
+  }, [name, email, formData.nombreCompleto, formData.contacto, selectedEvent, formData.evento]);
 
   const handleInputChange = (field: keyof LoanFormData, value: string) => {
-    if (field === 'nombreCompleto' && name) {
+    // Bloquear edición de campos automáticos si el usuario está logueado
+    if ((field === 'nombreCompleto' || field === 'contacto') && user) {
       return;
     }
     
@@ -102,10 +137,13 @@ export const LoanForm: React.FC = () => {
   const handleNewLoan = () => {
     setFormData({
       nombreCompleto: name || '',
+      contacto: email || '',
       tipoEquipo: '',
       equipoId: '',
-      evento: '', // Sin prellenar
-      fecha: getGuatemalaDateString()
+      evento: '',
+      fecha: getGuatemalaDateString(),
+      fechaPrestamo: '',
+      fechaDevolucion: ''
     });
     reset();
   };
@@ -113,7 +151,7 @@ export const LoanForm: React.FC = () => {
   const equipmentOptions = formData.tipoEquipo 
     ? getEquipmentsByType(formData.tipoEquipo).map(eq => ({
         value: eq.id,
-        label: `${eq.id} - ${eq.estado}`
+        label: `${eq.id} - ${eq.estado}${eq.autorizacion ? ' (Requiere autorización)' : ''}`
       }))
     : [];
 
@@ -161,6 +199,11 @@ export const LoanForm: React.FC = () => {
                 </div>
                 
                 <div className="space-y-1">
+                  <span className="text-zinc-400 text-sm font-medium">Email de Contacto</span>
+                  <p className="text-zinc-200 font-semibold text-lg">{formData.contacto}</p>
+                </div>
+                
+                <div className="space-y-1">
                   <span className="text-zinc-400 text-sm font-medium">Equipo Asignado</span>
                   <p className="text-zinc-200 font-semibold text-lg">{formData.equipoId}</p>
                 </div>
@@ -181,6 +224,16 @@ export const LoanForm: React.FC = () => {
                     })}
                   </p>
                 </div>
+
+                {formData.fechaPrestamo && formData.fechaDevolucion && (
+                  <div className="space-y-1">
+                    <span className="text-zinc-400 text-sm font-medium">Horario del Préstamo</span>
+                    <div className="text-zinc-200 font-semibold text-sm">
+                      <p>Préstamo: {new Date(formData.fechaPrestamo).toLocaleString('es-GT')}</p>
+                      <p>Devolución: {new Date(formData.fechaDevolucion).toLocaleString('es-GT')}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -261,6 +314,32 @@ export const LoanForm: React.FC = () => {
                   )}
                 </div>
 
+                {/* Contact Field - NUEVO */}
+                <div className="relative">
+                  <Input
+                    label="Email de Contacto"
+                    type="email"
+                    value={formData.contacto}
+                    onChange={(e) => handleInputChange('contacto', e.target.value)}
+                    error={getFieldError(validationErrors, 'contacto')}
+                    required
+                    disabled={!!email || isSubmitting}
+                    className={email ? 'bg-zinc-800 cursor-not-allowed' : ''}
+                  />
+                  {email && (
+                    <div className="absolute right-3 top-8 text-zinc-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                  )}
+                  {email && (
+                    <p className="text-xs text-zinc-500 mt-2">
+                      Email automático de la cuenta
+                    </p>
+                  )}
+                </div>
+
                 {/* Equipment Type */}
                 <Select
                   label="Tipo de Equipo"
@@ -299,7 +378,7 @@ export const LoanForm: React.FC = () => {
 
               {/* Right Column */}
               <div className="space-y-8">
-                {/* Event - Nuevo componente */}
+                {/* Event */}
                 <EventSelect
                   label="Evento"
                   inputValue={formData.evento}
@@ -328,6 +407,36 @@ export const LoanForm: React.FC = () => {
                   disabled={isSubmitting}
                   helperText="Fechas permitidas: desde 2020 hasta el próximo año"
                 />
+
+                {/* Fechas calculadas - Solo mostrar si hay datos */}
+                {(formData.fechaPrestamo || formData.fechaDevolucion) && (
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 space-y-3">
+                    <h3 className="text-sm font-medium text-zinc-200 flex items-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Horarios de Préstamo</span>
+                    </h3>
+                    
+                    {formData.fechaPrestamo && (
+                      <div className="text-sm">
+                        <span className="text-zinc-400">Préstamo:</span>
+                        <span className="text-zinc-200 ml-2 font-medium">
+                          {new Date(formData.fechaPrestamo).toLocaleString('es-GT')}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {formData.fechaDevolucion && (
+                      <div className="text-sm">
+                        <span className="text-zinc-400">Devolución:</span>
+                        <span className="text-zinc-200 ml-2 font-medium">
+                          {new Date(formData.fechaDevolucion).toLocaleString('es-GT')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
