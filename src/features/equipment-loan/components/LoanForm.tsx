@@ -1,3 +1,4 @@
+// src/features/equipment-loan/components/LoanForm.tsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from './ui/Input';
@@ -9,16 +10,20 @@ import { useInventory } from '../hooks/useInventory';
 import { useEvents } from '../hooks/useEvents';
 import { useLoanSubmission } from '../hooks/useLoanSubmission';
 import { validateForm, getFieldError } from '../utils/validation';
-import { getTodayDate } from '../utils';
+import { getGuatemalaDateTime } from '../utils';
+import { getGuatemalaDateString } from './ui/DatePicker';
+import { useAuth } from '../../../hooks/useAuth';
 import type { LoanFormData } from '../types';
 
 export const LoanForm: React.FC = () => {
+  const { user, name } = useAuth();
+  
   const [formData, setFormData] = useState<LoanFormData>({
-    nombreCompleto: '',
+    nombreCompleto: name || '', // Prerellenar con el usuario loggeado
     tipoEquipo: '',
     equipoId: '',
     evento: '',
-    fecha: getTodayDate()
+    fecha: getGuatemalaDateString() // Usar fecha de Guatemala
   });
   
   const [validationErrors, setValidationErrors] = useState<any>({});
@@ -45,6 +50,13 @@ export const LoanForm: React.FC = () => {
     reset 
   } = useLoanSubmission();
 
+  // Auto-set user name when it loads
+  useEffect(() => {
+    if (name && !formData.nombreCompleto) {
+      setFormData(prev => ({ ...prev, nombreCompleto: name }));
+    }
+  }, [name, formData.nombreCompleto]);
+
   // Auto-set primary event when it loads, but only if user hasn't interacted
   useEffect(() => {
     if (primaryEvent && !formData.evento && !hasUserInteractedWithEvent) {
@@ -53,6 +65,11 @@ export const LoanForm: React.FC = () => {
   }, [primaryEvent, formData.evento, hasUserInteractedWithEvent]);
 
   const handleInputChange = (field: keyof LoanFormData, value: string) => {
+    // Prevenir cambio del nombre si está bloqueado
+    if (field === 'nombreCompleto' && name) {
+      return; // No permitir cambios si el usuario está loggeado
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear validation error when user types
@@ -90,13 +107,13 @@ export const LoanForm: React.FC = () => {
 
   const handleNewLoan = () => {
     setFormData({
-      nombreCompleto: '',
+      nombreCompleto: name || '', // Mantener el usuario loggeado
       tipoEquipo: '',
       equipoId: '',
       evento: primaryEvent || '',
-      fecha: getTodayDate()
+      fecha: getGuatemalaDateString() // Usar fecha de Guatemala
     });
-    setHasUserInteractedWithEvent(false); // Reset interaction flag
+    setHasUserInteractedWithEvent(false);
     reset();
   };
 
@@ -114,59 +131,113 @@ export const LoanForm: React.FC = () => {
 
   if (isSuccess) {
     return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md mx-auto bg-zinc-900 border border-zinc-800 rounded-lg p-6"
-      >
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="max-w-4xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-zinc-900 border border-zinc-800 rounded-xl p-8"
+        >
+          <div className="text-center space-y-6">
+            <div className="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-zinc-100 mb-3">
+                ¡Préstamo Registrado Exitosamente!
+              </h2>
+              <div className="bg-zinc-800 rounded-lg p-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-zinc-400">Usuario:</span>
+                    <p className="text-zinc-200 font-medium">{formData.nombreCompleto}</p>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Equipo:</span>
+                    <p className="text-zinc-200 font-medium">{formData.equipoId}</p>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Evento:</span>
+                    <p className="text-zinc-200 font-medium">{formData.evento}</p>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Fecha:</span>
+                    <p className="text-zinc-200 font-medium">
+                      {new Date(formData.fecha + 'T00:00:00').toLocaleDateString('es-GT', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Button onClick={handleNewLoan} className="w-full max-w-md mx-auto" size="lg">
+              Registrar Otro Préstamo
+            </Button>
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-100 mb-2">
-              ¡Préstamo Registrado!
-            </h2>
-            <p className="text-zinc-400 mb-4">
-              El equipo <strong className="text-zinc-200">{formData.equipoId}</strong> ha sido asignado a{' '}
-              <strong className="text-zinc-200">{formData.nombreCompleto}</strong>
-            </p>
-          </div>
-          <Button onClick={handleNewLoan} className="w-full">
-            Registrar Otro Préstamo
-          </Button>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-md mx-auto bg-zinc-900 border border-zinc-800 rounded-lg p-6"
-    >
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-zinc-100 mb-2">
-          Préstamo de Equipo
-        </h2>
-        <p className="text-zinc-400">
-          Complete este formulario para registrar el préstamo de equipo
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-8"
+      >
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-zinc-100 mb-3">
+            Nuevo Préstamo de Equipo
+          </h2>
+          <p className="text-zinc-400 max-w-2xl mx-auto">
+            Complete la información para registrar el préstamo de equipo. Los campos marcados con * son obligatorios.
+          </p>
+          
+          {/* Información de zona horaria */}
+          <div className="mt-4 inline-flex items-center space-x-2 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-zinc-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Fecha actual en Guatemala: {getGuatemalaDateTime().formatted}</span>
+          </div>
+        </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Nombre Completo"
-          value={formData.nombreCompleto}
-          onChange={(e) => handleInputChange('nombreCompleto', e.target.value)}
-          error={getFieldError(validationErrors, 'nombreCompleto')}
-          required
-          disabled={isSubmitting}
-        />
+        {/* Formulario */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Usuario - Bloqueado si está loggeado */}
+        <div className="relative">
+          <Input
+            label="Usuario Responsable"
+            value={formData.nombreCompleto}
+            onChange={(e) => handleInputChange('nombreCompleto', e.target.value)}
+            error={getFieldError(validationErrors, 'nombreCompleto')}
+            required
+            disabled={!!name || isSubmitting}
+            className={name ? 'bg-zinc-800 cursor-not-allowed' : ''}
+          />
+          {name && (
+            <div className="absolute right-3 top-8 text-zinc-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          )}
+          {name && (
+            <p className="text-xs text-zinc-500 mt-1">
+              Usuario actual: {user?.email}
+            </p>
+          )}
+        </div>
 
+        {/* Tipo de Equipo */}
         <Select
           label="Tipo de Equipo"
           value={formData.tipoEquipo}
@@ -177,6 +248,7 @@ export const LoanForm: React.FC = () => {
           disabled={inventoryLoading || isSubmitting}
         />
 
+        {/* Equipo Específico */}
         <AnimatePresence>
           {formData.tipoEquipo && (
             <motion.div
@@ -190,14 +262,16 @@ export const LoanForm: React.FC = () => {
                 onChange={(value) => handleInputChange('equipoId', value)}
                 options={equipmentOptions}
                 error={getFieldError(validationErrors, 'equipoId')}
-                placeholder="Selecciona un equipo..."
+                placeholder="Selecciona un equipo disponible..."
                 required
                 disabled={isSubmitting}
+                helperText={`${equipmentOptions.length} equipos disponibles`}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Evento */}
         <EventComboBox
           label="Evento"
           value={formData.evento}
@@ -217,36 +291,49 @@ export const LoanForm: React.FC = () => {
           disabled={isSubmitting}
         />
 
+        {/* Fecha */}
         <DatePicker
-          label="Fecha"
+          label="Fecha del Préstamo"
           value={formData.fecha}
           onChange={(e) => handleInputChange('fecha', e.target.value)}
           error={getFieldError(validationErrors, 'fecha')}
-          min={getTodayDate()}
           required
           disabled={isSubmitting}
+          helperText="Puede seleccionar fechas anteriores, actuales o futuras"
         />
 
+        {/* Error de envío */}
         {submissionError && (
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="p-3 bg-red-500/10 border border-red-500/20 rounded-md"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg"
           >
-            <p className="text-red-400 text-sm">{submissionError}</p>
+            <div className="flex items-center space-x-2">
+              <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <p className="text-red-400 text-sm font-medium">{submissionError}</p>
+            </div>
           </motion.div>
         )}
 
-        <Button 
-          type="submit" 
-          className="w-full" 
-          loading={isSubmitting}
-          disabled={inventoryLoading || eventsLoading}
-        >
-          {isSubmitting ? 'Registrando...' : 'Registrar Préstamo'}
-        </Button>
+        {/* Botón de envío */}
+        <div className="pt-4">
+          <Button 
+            type="submit" 
+            className="w-full" 
+            loading={isSubmitting}
+            disabled={inventoryLoading || eventsLoading}
+            size="lg"
+          >
+            {isSubmitting ? 'Registrando Préstamo...' : 'Registrar Préstamo'}
+          </Button>
+        </div>
       </form>
-    </motion.div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

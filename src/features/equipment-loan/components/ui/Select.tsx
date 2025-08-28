@@ -28,7 +28,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     ...props 
   }, ref) => {
     return (
-      <div className="space-y-1">
+      <div className="space-y-2">
         {label && (
           <label className="block text-sm font-medium text-zinc-200">
             {label}
@@ -38,10 +38,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <div className="relative">
           <select
             className={cn(
-              "w-full px-3 py-2 bg-zinc-900 border rounded-md text-zinc-100",
+              "w-full px-4 py-3 bg-zinc-900 border rounded-lg text-zinc-100",
               "focus:outline-none focus:ring-2 focus:ring-zinc-700 focus:border-transparent",
               "disabled:opacity-50 disabled:cursor-not-allowed",
-              "appearance-none cursor-pointer",
+              "appearance-none cursor-pointer transition-all",
               error 
                 ? "border-red-500 focus:ring-red-500/20" 
                 : "border-zinc-700 hover:border-zinc-600",
@@ -66,14 +66,19 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ))}
           </select>
           {/* Chevron down icon */}
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-400">
-            <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400">
+            <svg className="h-5 w-5 fill-current" viewBox="0 0 20 20">
               <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
             </svg>
           </div>
         </div>
         {error && (
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-red-400 flex items-center space-x-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <span>{error}</span>
+          </p>
         )}
         {helperText && !error && (
           <p className="text-sm text-zinc-400">{helperText}</p>

@@ -1,9 +1,40 @@
+// src/features/equipment-loan/utils/index.ts
 import { clsx, type ClassValue } from 'clsx';
 
 /**
  * Utility function to merge class names
  */
 export const cn = (...inputs: ClassValue[]) => clsx(inputs);
+
+/**
+ * Get today's date in YYYY-MM-DD format for Guatemala timezone (GMT-6)
+ */
+export const getTodayDate = (): string => {
+  const now = new Date();
+  // Guatemala está en GMT-6
+  const guatemalaTime = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+  return guatemalaTime.toISOString().split('T')[0];
+};
+
+/**
+ * Get Guatemala current date and time info
+ */
+export const getGuatemalaDateTime = () => {
+  const now = new Date();
+  const guatemalaTime = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+  
+  return {
+    date: guatemalaTime.toISOString().split('T')[0],
+    time: guatemalaTime.toTimeString().split(' ')[0],
+    datetime: guatemalaTime.toISOString(),
+    formatted: guatemalaTime.toLocaleDateString('es-GT', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  };
+};
 
 /**
  * Format date for display
@@ -26,13 +57,6 @@ export const formatTime = (date: string | Date): string => {
     hour: '2-digit',
     minute: '2-digit'
   });
-};
-
-/**
- * Get today's date in YYYY-MM-DD format
- */
-export const getTodayDate = (): string => {
-  return new Date().toISOString().split('T')[0];
 };
 
 /**
