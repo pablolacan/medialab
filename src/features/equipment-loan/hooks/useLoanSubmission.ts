@@ -22,9 +22,15 @@ export const useLoanSubmission = (): UseLoanSubmissionReturn => {
       return response.success;
     }
     
-    // Verificar formato de n8n
+    // Verificar formato de n8n - ACTUALIZADO para incluir "Pendiente"
     if (response.Estado) {
-      const estadosExitosos = ['Prestado', 'Asignado', 'En Préstamo', 'Activo'];
+      const estadosExitosos = [
+        'Prestado',      // Equipo prestado directamente (sin autorización)
+        'Pendiente',     // Equipo pendiente de autorización (ÉXITO - proceso completado correctamente)
+        'Asignado', 
+        'En Préstamo', 
+        'Activo'
+      ];
       return estadosExitosos.includes(response.Estado);
     }
     
@@ -55,13 +61,15 @@ export const useLoanSubmission = (): UseLoanSubmissionReturn => {
       // Preparar datos para enviar a n8n
       const payload = {
         nombreCompleto: data.nombreCompleto.trim(),
-        contacto: data.contacto.trim(),           // AGREGAR
+        contacto: data.contacto.trim(),
         tipoEquipo: data.tipoEquipo,
         equipoId: data.equipoId,
         evento: data.evento.trim(),
         fecha: data.fecha,
-        fechaPrestamo: data.fechaPrestamo,        // AGREGAR
-        fechaDevolucion: data.fechaDevolucion,    // AGREGAR
+        fechaPrestamo: data.fechaPrestamo,
+        fechaDevolucion: data.fechaDevolucion,
+        // NUEVO: Incluir información de autorización desde el frontend
+        requiereAutorizacion: data.requiereAutorizacion || false,
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -80,10 +88,14 @@ export const useLoanSubmission = (): UseLoanSubmissionReturn => {
       if (isSuccessfulResponse(response)) {
         console.log('✅ Préstamo enviado exitosamente');
         
-        // Log información adicional si está disponible
-        if (response.Estado) {
-          console.log(`📊 Estado del equipo: ${response.Estado}`);
+        // Log información específica según el estado
+        if (response.Estado === 'Pendiente') {
+          console.log('⏳ Préstamo registrado como PENDIENTE - requiere autorización');
+        } else if (response.Estado === 'Prestado') {
+          console.log('✅ Préstamo AUTORIZADO automáticamente - equipo disponible');
         }
+        
+        // Log información adicional si está disponible
         if (response.Fecha) {
           console.log(`📅 Fecha: ${response.Fecha}`);
         }

@@ -24,6 +24,7 @@ export interface LoanFormData {
   fecha: string;             
   fechaPrestamo: string;     
   fechaDevolucion: string;   
+  requiereAutorizacion?: boolean; // NUEVO CAMPO
 }
 
 export interface ApiResponse<T = any> {

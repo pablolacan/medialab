@@ -33,7 +33,11 @@ const calculateLoanDates = (eventoInicio: string, eventoFin: string) => {
 
 // Helper function para obtener información del equipo seleccionado
 const getSelectedEquipmentInfo = (equipmentId: string, equipments: Equipment[]) => {
-  return equipments.find(eq => eq.id === equipmentId);
+  const found = equipments.find(eq => eq.id === equipmentId);
+  console.log(`🔍 Looking for equipment ID: ${equipmentId}`);
+  console.log('📋 Available equipments:', equipments.map(eq => ({ id: eq.id, autorizacion: eq.autorizacion })));
+  console.log('✅ Found equipment:', found);
+  return found;
 };
 
 export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
@@ -72,12 +76,24 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
     reset 
   } = useLoanSubmission();
 
-  // Obtener información del equipo seleccionado
+  // Obtener información del equipo seleccionado con debugging mejorado
   const selectedEquipment = formData.equipoId 
     ? getSelectedEquipmentInfo(formData.equipoId, getEquipmentsByType(formData.tipoEquipo))
     : null;
 
   const requiresAuthorization = selectedEquipment?.autorizacion || false;
+
+  // Debug logging para autorización
+  useEffect(() => {
+    if (formData.equipoId) {
+      console.log('🔍 Authorization Debug Info:');
+      console.log('Selected Equipment ID:', formData.equipoId);
+      console.log('Selected Equipment Object:', selectedEquipment);
+      console.log('Requires Authorization:', requiresAuthorization);
+      console.log('Equipment Type:', formData.tipoEquipo);
+      console.log('Available Equipments for Type:', getEquipmentsByType(formData.tipoEquipo));
+    }
+  }, [formData.equipoId, selectedEquipment, requiresAuthorization, formData.tipoEquipo, getEquipmentsByType]);
 
   useEffect(() => {
     if (name && !formData.nombreCompleto) {
@@ -141,7 +157,20 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
     }
     
     setValidationErrors({});
-    await submitLoan(formData);
+    
+    // Log datos antes del envío incluyendo información de autorización
+    console.log('📤 Submitting loan with authorization info:');
+    console.log('Form Data:', formData);
+    console.log('Selected Equipment:', selectedEquipment);
+    console.log('Requires Authorization:', requiresAuthorization);
+    
+    // Agregar el campo de autorización a los datos del formulario
+    const submissionData = {
+      ...formData,
+      requiereAutorizacion: requiresAuthorization
+    };
+    
+    await submitLoan(submissionData);
   };
 
   const handleNewLoan = () => {
@@ -179,20 +208,36 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center space-y-8"
           >
-            {/* Success Icon */}
-            <div className="w-24 h-24 mx-auto bg-green-500/20 rounded-full flex items-center justify-center border-2 border-green-500/30">
-              <svg className="w-12 h-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            {/* Success Icon - Conditional based on authorization */}
+            <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center border-2 ${
+              requiresAuthorization 
+                ? 'bg-amber-500/20 border-amber-500/30'
+                : 'bg-green-500/20 border-green-500/30'
+            }`}>
+              {requiresAuthorization ? (
+                <svg className="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-12 h-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
             </div>
             
             {/* Success Message */}
             <div className="space-y-4">
               <h2 className="text-3xl font-bold text-zinc-100">
-                ¡Préstamo Registrado Exitosamente!
+                {requiresAuthorization 
+                  ? '⏳ Solicitud de Préstamo Enviada' 
+                  : '✅ Préstamo Registrado Exitosamente'
+                }
               </h2>
               <p className="text-zinc-400 text-lg">
-                El equipo ha sido asignado correctamente
+                {requiresAuthorization
+                  ? 'Tu solicitud está pendiente de autorización. Recibirás una notificación cuando sea aprobada.'
+                  : 'El equipo ha sido asignado y está listo para ser retirado.'
+                }
               </p>
             </div>
 
@@ -254,7 +299,27 @@ export const LoanForm: React.FC<LoanFormProps> = ({ selectedEvent }) => {
                       </svg>
                       <div>
                         <p className="text-amber-400 font-semibold text-sm">Estado: Pendiente de autorización</p>
-                        <p className="text-amber-300 text-xs">Un administrador debe aprobar este préstamo antes de poder retirar el equipo</p>
+                        <p className="text-amber-300 text-xs">
+                          Un administrador debe aprobar este préstamo antes de poder retirar el equipo. 
+                          Te notificaremos por email cuando sea aprobado.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Confirmación de préstamo automático */}
+                {!requiresAuthorization && (
+                  <div className="col-span-full bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <div>
+                        <p className="text-green-400 font-semibold text-sm">Estado: Préstamo Autorizado</p>
+                        <p className="text-green-300 text-xs">
+                          El equipo está listo para ser retirado. Puedes proceder según el horario establecido.
+                        </p>
                       </div>
                     </div>
                   </div>
